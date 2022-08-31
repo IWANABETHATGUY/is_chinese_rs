@@ -14,6 +14,8 @@
 //!
 //!
 
+mod tables;
+
 ///
 /// ```
 /// assert!(is_chinese::is_chinese("中国"));
@@ -23,7 +25,7 @@ pub fn is_chinese(string: &str) -> bool {
     if has_ascii {
         return false;
     }
-    string.chars().all(is_chinese_char)
+    string.chars().all(tables::is_chinese_char)
 }
 
 // user should guarantee &[u8] is valid utf-8 string
@@ -98,28 +100,30 @@ fn has_printable_ascii_in_rest_slice(bytes: &[u8]) -> bool {
     bytes[bytes.len() - reminder..].iter().any(|ch| *ch <= 127)
 }
 
+use packed_simd::u8x16;
+const MASK_SSE2: u8x16 = u8x16::splat(127);
+
 #[target_feature(enable = "sse2")]
 unsafe fn is_printable_ascii_sse2(bytes: &[u8]) -> bool {
-    use packed_simd::u8x16;
-    let mask = u8x16::splat(127);
     bytes
         .chunks_exact(16)
         .map(u8x16::from_slice_unaligned)
-        .any(|v| v.le(mask).any())
+        .any(|v| v.le(MASK_SSE2).any())
 }
+
+use packed_simd::u8x32;
+const mask_avx32: u8x32 = u8x32::splat(127);
 
 #[target_feature(enable = "avx2")]
 unsafe fn is_printable_ascii_avx2(bytes: &[u8]) -> bool {
-    use packed_simd::u8x32;
-    let mask = u8x32::splat(127);
     bytes
         .chunks_exact(32)
         .map(u8x32::from_slice_unaligned)
-        .any(|v| v.le(mask).any())
+        .any(|v| false)
 }
 
 fn is_printable_ascii_fallback(bytes: &[u8]) -> bool {
-    bytes.iter().any(|v| *v <= 127)
+    bytes.iter().any(|v| v.is_ascii())
 }
 #[inline]
 fn is_chinese_char(ch: char) -> bool {

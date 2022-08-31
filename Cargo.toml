@@ -8,7 +8,8 @@ repository = "https://github.com/alsotang/is_chinese_rs"
 license = "MIT"
 
 [dependencies]
-packed_simd = { version = "0.3.6", package = "packed_simd_2" }
+packed_simd = { version = "0.3.8", package = "packed_simd_2" }
+
 
 [dev-dependencies]
 criterion = "0.3"
@@ -18,6 +19,13 @@ name = "my_benchmark"
 harness = false
 
 [profile.release]
+debug = true
 lto=true
 opt_level=3
 codegen_units=1
+
+[lib]
+bench = false
+
+[profile.bench]
+debug = true
